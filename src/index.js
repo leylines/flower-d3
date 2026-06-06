@@ -159,10 +159,6 @@ function showPlayButton() {
   select('.play-control').style('display', '');
 }
 
-function hidePlayButton() {
-  select('.play-control').style('display', 'none');
-}
-
 // --- Reconfiguration ---
 function recreateAll() {
   stopAnimation();
@@ -207,8 +203,7 @@ createGUI(config, {
   onNumPoints() {
     const was = isPlaying;
     recreateAll();
-    hidePlayButton();
-    if (was) startAnimation(); else showPlayButton();
+    if (was) startAnimation();
   },
   onDuration() {},
   onBg(v) { applyBackground(v); },
@@ -219,8 +214,7 @@ createGUI(config, {
     buildLayouts();
     layoutMap.phyllotaxis(points);
     draw();
-    hidePlayButton();
-    if (was) startAnimation(); else showPlayButton();
+    if (was) startAnimation();
   },
 });
 
