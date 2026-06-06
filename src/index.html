@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8">
+  <title>Flower of Life</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #000;
+      min-height: 100vh;
+    }
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    #container {
+      position: relative;
+      line-height: 0;
+    }
+    canvas {
+      cursor: pointer;
+      display: block;
+    }
+    .play-control {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #f4f4f4;
+      text-shadow: rgba(0, 0, 0, 0.7) 1px 1px 1px;
+      font-size: clamp(40px, 15vw, 100px);
+      font-family: 'helvetica neue', calibri, sans-serif;
+      font-weight: 100;
+      cursor: pointer;
+      z-index: 1;
+      user-select: none;
+    }
+    .play-control:hover {
+      color: #fff;
+      text-shadow: #000 3px 3px 0px;
+      background-color: rgba(0, 0, 0, 0.04);
+    }
+  </style>
+</head>
+<body>
+  <div id="container"></div>
+</body>
+</html>
