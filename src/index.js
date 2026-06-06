@@ -6,20 +6,23 @@ import {
   treeLayout,
   metaLayout,
 } from './common';
+import { createGUI } from './gui';
 
 const LOGICAL_SIZE = 600;
-
-const numPoints = 64000;
 const pointWidth = 2;
 const pointMargin = 2;
 
-const duration = 8000;
-const ease = easeCubic;
-let timer;
-let currLayout = 0;
+const config = {
+  numPoints: 64000,
+  duration: 8000,
+  bgBlack: true,
+  seqTree: true,
+  seqFlower: true,
+  seqMeta: true,
+  seqPhyllotaxis: true,
+};
 
-const points = createPoints(numPoints, pointWidth, LOGICAL_SIZE, LOGICAL_SIZE);
-
+// --- Static geometry ---
 var flower_f = [
   76,
   68,58,66,84,94,86,
@@ -42,34 +45,29 @@ for (var k=1.0; k<18.0; k++) {
   }
 }
 
-var flower_1 = flower_f.slice(0, 1);
-var flower_2 = flower_f.slice(0, 7);
-var flower_3 = flower_f.slice(0, 19);
-var flower_4 = flower_f.slice(0, 37);
-
 var tree_radius  = (LOGICAL_SIZE / 30);
-var tree_circles = [
-  76,60,56,92,96,112,4,24,20,148
-];
+var tree_circles = [76,60,56,92,96,112,4,24,20,148];
 
-var meta_circles = [
-  76,76,60,44,56,36,92,108,96,116,112,148,40,4
-];
+var meta_circles = [76,76,60,44,56,36,92,108,96,116,112,148,40,4];
 
-const toFlower_f = (points) => flowerLayout(points, pointWidth + pointMargin, LOGICAL_SIZE, LOGICAL_SIZE, matrix, flower_f, radius);
-const toFlower_1 = (points) => flowerLayout(points, pointWidth + pointMargin, LOGICAL_SIZE, LOGICAL_SIZE, matrix, flower_1, radius);
-const toFlower_2 = (points) => flowerLayout(points, pointWidth + pointMargin, LOGICAL_SIZE, LOGICAL_SIZE, matrix, flower_2, radius);
-const toFlower_3 = (points) => flowerLayout(points, pointWidth + pointMargin, LOGICAL_SIZE, LOGICAL_SIZE, matrix, flower_3, radius);
-const toFlower_4 = (points) => flowerLayout(points, pointWidth + pointMargin, LOGICAL_SIZE, LOGICAL_SIZE, matrix, flower_4, radius);
+// --- Layout wrappers ---
+const layoutMap = {
+  tree: (pts) => treeLayout(pts, pointWidth + pointMargin, LOGICAL_SIZE, LOGICAL_SIZE, matrix, tree_circles, tree_radius),
+  flower: (pts) => flowerLayout(pts, pointWidth + pointMargin, LOGICAL_SIZE, LOGICAL_SIZE, matrix, flower_f, radius),
+  meta: (pts) => metaLayout(pts, pointWidth + pointMargin, LOGICAL_SIZE, LOGICAL_SIZE, matrix, meta_circles, radius),
+  phyllotaxis: (pts) => phyllotaxisLayout(pts, pointWidth + pointMargin, LOGICAL_SIZE / 2, LOGICAL_SIZE / 2),
+};
 
-const toTree = (points) => treeLayout(points, pointWidth + pointMargin, LOGICAL_SIZE, LOGICAL_SIZE, matrix, tree_circles, tree_radius);
-const toMeta = (points) => metaLayout(points, pointWidth + pointMargin, LOGICAL_SIZE, LOGICAL_SIZE, matrix, meta_circles, radius);
-const toPhyllotaxis = (points) => phyllotaxisLayout(points, pointWidth + pointMargin, LOGICAL_SIZE / 2, LOGICAL_SIZE / 2);
-
-const layouts = [toTree, toPhyllotaxis, toFlower_f, toPhyllotaxis, toMeta];
+// --- Mutable state ---
+let points;
+let layouts = [];
+let currLayout = 0;
+let timer = null;
+let isPlaying = false;
 
 const container = select('#container');
 
+// --- Canvas helpers ---
 function getCanvasDisplaySize() {
   return Math.floor(window.innerHeight > window.innerWidth
     ? window.innerWidth
@@ -79,13 +77,11 @@ function getCanvasDisplaySize() {
 function resizeCanvas() {
   const size = getCanvasDisplaySize();
   const dpr = window.devicePixelRatio || 1;
-
   canvas
     .attr('width', LOGICAL_SIZE * dpr)
     .attr('height', LOGICAL_SIZE * dpr)
     .style('width', size + 'px')
     .style('height', size + 'px');
-
   canvas.node().getContext('2d').setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 
@@ -93,39 +89,53 @@ function draw() {
   const ctx = canvas.node().getContext('2d');
   ctx.save();
   ctx.clearRect(0, 0, LOGICAL_SIZE, LOGICAL_SIZE);
-
   for (let i = 0; i < points.length; ++i) {
     const point = points[i];
     ctx.fillStyle = point.color;
     ctx.fillRect(point.x, point.y, pointWidth, pointWidth);
   }
-
   ctx.restore();
 }
 
+// --- Layout sequence builder ---
+function buildLayouts() {
+  const enabled = [];
+  if (config.seqTree) enabled.push('tree');
+  if (config.seqFlower) enabled.push('flower');
+  if (config.seqMeta) enabled.push('meta');
+
+  if (enabled.length === 0) {
+    layouts = [layoutMap.phyllotaxis];
+    return;
+  }
+
+  if (!config.seqPhyllotaxis || enabled.length === 1) {
+    layouts = enabled.map(n => layoutMap[n]);
+    return;
+  }
+
+  layouts = [];
+  enabled.forEach((name, i) => {
+    layouts.push(layoutMap[name]);
+    if (i < enabled.length - 1) {
+      layouts.push(layoutMap.phyllotaxis);
+    }
+  });
+}
+
+// --- Animation ---
 function animate(layout) {
-  points.forEach(point => {
-    point.sx = point.x;
-    point.sy = point.y;
-  });
-
+  points.forEach(p => { p.sx = p.x; p.sy = p.y; });
   layout(points);
-
-  points.forEach(point => {
-    point.tx = point.x;
-    point.ty = point.y;
-  });
+  points.forEach(p => { p.tx = p.x; p.ty = p.y; });
 
   timer = d3Timer((elapsed) => {
-    const t = Math.min(1, ease(elapsed / duration));
-
-    points.forEach(point => {
-      point.x = point.sx * (1 - t) + point.tx * t;
-      point.y = point.sy * (1 - t) + point.ty * t;
+    const t = Math.min(1, easeCubic(elapsed / config.duration));
+    points.forEach(p => {
+      p.x = p.sx * (1 - t) + p.tx * t;
+      p.y = p.sy * (1 - t) + p.ty * t;
     });
-
     draw();
-
     if (t === 1) {
       timer.stop();
       currLayout = (currLayout + 1) % layouts.length;
@@ -134,25 +144,87 @@ function animate(layout) {
   });
 }
 
+function startAnimation() {
+  isPlaying = true;
+  select('.play-control').style('display', 'none');
+  animate(layouts[currLayout]);
+}
+
+function stopAnimation() {
+  isPlaying = false;
+  if (timer) { timer.stop(); timer = null; }
+}
+
+function showPlayButton() {
+  select('.play-control').style('display', '');
+}
+
+function hidePlayButton() {
+  select('.play-control').style('display', 'none');
+}
+
+// --- Reconfiguration ---
+function recreateAll() {
+  stopAnimation();
+  currLayout = 0;
+  points = createPoints(config.numPoints, pointWidth, LOGICAL_SIZE, LOGICAL_SIZE);
+  buildLayouts();
+  layoutMap.phyllotaxis(points);
+  draw();
+}
+
+function applyBackground(bgBlack) {
+  document.body.style.background = bgBlack ? '#000' : '#fff';
+}
+
+// --- Create canvas ---
 const canvas = container.append('canvas')
   .on('click', function () {
-    select('.play-control').style('display', '');
-    if (timer) timer.stop();
+    if (isPlaying) {
+      stopAnimation();
+      showPlayButton();
+    }
   });
 
 resizeCanvas();
 
-toPhyllotaxis(points);
+// --- Initial state ---
+points = createPoints(config.numPoints, pointWidth, LOGICAL_SIZE, LOGICAL_SIZE);
+buildLayouts();
+layoutMap.phyllotaxis(points);
 draw();
 
+// --- Play button ---
 container.append('div')
   .attr('class', 'play-control')
   .text('PLAY')
   .on('click', function () {
-    animate(layouts[currLayout]);
-    select(this).style('display', 'none');
+    if (!isPlaying) startAnimation();
   });
 
+// --- GUI ---
+createGUI(config, {
+  onNumPoints() {
+    const was = isPlaying;
+    recreateAll();
+    hidePlayButton();
+    if (was) startAnimation(); else showPlayButton();
+  },
+  onDuration() {},
+  onBg(v) { applyBackground(v); },
+  onSequence() {
+    const was = isPlaying;
+    stopAnimation();
+    currLayout = 0;
+    buildLayouts();
+    layoutMap.phyllotaxis(points);
+    draw();
+    hidePlayButton();
+    if (was) startAnimation(); else showPlayButton();
+  },
+});
+
+// --- Window resize ---
 window.addEventListener('resize', () => {
   resizeCanvas();
   draw();
