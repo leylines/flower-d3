@@ -2,7 +2,8 @@ import { scaleSequential, interpolateRainbow, range, scaleLinear } from 'd3';
 
 export function phyllotaxisLayout(points, pointWidth, xOffset = 0, yOffset = 0, iOffset = 0) {
   const theta = Math.PI * (3 - Math.sqrt(5));
-  const pointRadius = pointWidth / 3.42;
+  const maxR = Math.min(xOffset, yOffset) - pointWidth;
+  const pointRadius = maxR / Math.sqrt(points.length - 1);
 
   points.forEach((point, i) => {
     const index = (i + iOffset) % points.length;
@@ -37,19 +38,19 @@ export function createPoints(numPoints, pointWidth, width, height) {
 
 export function flowerLayout(points, pointWidth, width, height, matrix, symbol, radius) {
   const periods = 64;
+  const sSize = Math.ceil((points.length - 1) / periods);
 
   const thetaScale = scaleLinear()
     .domain([0, points.length - 1])
     .range([0, periods * 2 * Math.PI]);
 
   var sCount = 0;
-  var sSize = 1000;
-
   var xOffset = 42;
   var yOffset = 32;
 
   symbol.map(function(m) {
-    for (var i = (sCount * sSize); i < ((sCount + 1) * sSize); i++) {
+    var end = Math.min((sCount + 1) * sSize, points.length);
+    for (var i = sCount * sSize; i < end; i++) {
       points[i].x = radius * Math.cos(thetaScale(i)) + xOffset + matrix[m][0];
       points[i].y = radius * Math.sin(thetaScale(i)) + yOffset + matrix[m][1];
     }
@@ -60,7 +61,8 @@ export function flowerLayout(points, pointWidth, width, height, matrix, symbol, 
   yOffset = height / 2;
   radius  = (height / 2) - 0.5 * pointWidth;
 
-  for (var i =(sCount * sSize); i < ((sCount + 3) * sSize); i++) {
+  var end = Math.min((sCount + 3) * sSize, points.length);
+  for (var i = sCount * sSize; i < end; i++) {
     points[i].x = radius * Math.cos(thetaScale(i)) + xOffset;
     points[i].y = radius * Math.sin(thetaScale(i)) + yOffset;
   }
@@ -71,19 +73,19 @@ export function flowerLayout(points, pointWidth, width, height, matrix, symbol, 
 
 export function treeLayout(points, pointWidth, width, height, matrix, symbol, radius) {
   const periods = 64;
+  const sSize = Math.ceil((points.length - 1) / periods);
 
   const thetaScale = scaleLinear()
     .domain([0, points.length - 1])
     .range([0, periods * 2 * Math.PI]);
 
   var sCount = 0;
-  var sSize = 1000;
-
   var xOffset = 42;
   var yOffset = 32;
 
   symbol.map(function(m) {
-    for (var i = (sCount * sSize); i < ((sCount + 2) * sSize); i++) {
+    var end = Math.min((sCount + 2) * sSize, points.length);
+    for (var i = sCount * sSize; i < end; i++) {
       points[i].x = radius * Math.cos(thetaScale(i)) + xOffset + matrix[m][0];
       points[i].y = radius * Math.sin(thetaScale(i)) + yOffset + matrix[m][1];
     }
@@ -106,14 +108,15 @@ export function treeLayout(points, pointWidth, width, height, matrix, symbol, ra
     var height = matrix[m[1]][1] - matrix[m[0]][1];
 
     var xScale = scaleLinear()
-      .domain([0, 2000])
+      .domain([0, 2 * sSize - 1])
       .range([0, width]);
     var yScale = scaleLinear()
-      .domain([0, 2000])
+      .domain([0, 2 * sSize - 1])
       .range([0, height]);
 
     var j = 0;
-    for (var i = (sCount * sSize); i < ((sCount + 2) * sSize); i++) {
+    var end = Math.min((sCount + 2) * sSize, points.length);
+    for (var i = sCount * sSize; i < end; i++) {
       points[i].x = matrix[m[0]][0] + xScale(j) + xOffset;
       points[i].y = matrix[m[0]][1] + yScale(j) + yOffset;
       j++;
@@ -126,19 +129,19 @@ export function treeLayout(points, pointWidth, width, height, matrix, symbol, ra
 
 export function metaLayout(points, pointWidth, width, height, matrix, symbol, radius) {
   const periods = 64;
+  const sSize = Math.ceil((points.length - 1) / periods);
 
   const thetaScale = scaleLinear()
     .domain([0, points.length - 1])
     .range([0, periods * 2 * Math.PI]);
 
   var sCount = 0;
-  var sSize = 1000;
-
   var xOffset = 42;
   var yOffset = 32;
 
   symbol.map(function(m) {
-    for (var i = (sCount * sSize); i < ((sCount + 1) * sSize); i++) {
+    var end = Math.min((sCount + 1) * sSize, points.length);
+    for (var i = sCount * sSize; i < end; i++) {
       points[i].x = radius * Math.cos(thetaScale(i)) + xOffset + matrix[m][0];
       points[i].y = radius * Math.sin(thetaScale(i)) + yOffset + matrix[m][1];
     }
@@ -149,7 +152,8 @@ export function metaLayout(points, pointWidth, width, height, matrix, symbol, ra
   yOffset = height / 2;
   radius  = (height / 2) - 0.5 * pointWidth;
 
-  for (var i =(sCount * sSize); i < ((sCount + 6) * sSize); i++) {
+  var end = Math.min((sCount + 6) * sSize, points.length);
+  for (var i = sCount * sSize; i < end; i++) {
     points[i].x = radius * Math.cos(thetaScale(i)) + xOffset;
     points[i].y = radius * Math.sin(thetaScale(i)) + yOffset;
   }
@@ -188,14 +192,15 @@ export function metaLayout(points, pointWidth, width, height, matrix, symbol, ra
     var height = matrix[m[1]][1] - matrix[m[0]][1];
 
     var xScale = scaleLinear()
-      .domain([0, 1000])
+      .domain([0, sSize - 1])
       .range([0, width]);
     var yScale = scaleLinear()
-      .domain([0, 1000])
+      .domain([0, sSize - 1])
       .range([0, height]);
 
     var j = 0;
-    for (var i = (sCount * sSize); i < ((sCount + 1) * sSize); i++) {
+    var end = Math.min((sCount + 1) * sSize, points.length);
+    for (var i = sCount * sSize; i < end; i++) {
       points[i].x = matrix[m[0]][0] + xScale(j) + xOffset;
       points[i].y = matrix[m[0]][1] + yScale(j) + yOffset;
       j++;

@@ -7,6 +7,7 @@ import {
   metaLayout,
 } from './common';
 import { createGUI } from './gui';
+import { sequences } from './sequences';
 
 const LOGICAL_SIZE = 600;
 const pointWidth = 2;
@@ -16,10 +17,7 @@ const config = {
   numPoints: 64000,
   duration: 8000,
   bgBlack: true,
-  seqTree: true,
-  seqFlower: true,
-  seqMeta: true,
-  seqPhyllotaxis: true,
+  sequenceName: 'Default',
 };
 
 // --- Static geometry ---
@@ -56,6 +54,13 @@ const layoutMap = {
   flower: (pts) => flowerLayout(pts, pointWidth + pointMargin, LOGICAL_SIZE, LOGICAL_SIZE, matrix, flower_f, radius),
   meta: (pts) => metaLayout(pts, pointWidth + pointMargin, LOGICAL_SIZE, LOGICAL_SIZE, matrix, meta_circles, radius),
   phyllotaxis: (pts) => phyllotaxisLayout(pts, pointWidth + pointMargin, LOGICAL_SIZE / 2, LOGICAL_SIZE / 2),
+};
+
+const nameToLayout = {
+  Tree: layoutMap.tree,
+  Flower: layoutMap.flower,
+  Meta: layoutMap.meta,
+  Phyllo: layoutMap.phyllotaxis,
 };
 
 // --- Mutable state ---
@@ -99,28 +104,12 @@ function draw() {
 
 // --- Layout sequence builder ---
 function buildLayouts() {
-  const enabled = [];
-  if (config.seqTree) enabled.push('tree');
-  if (config.seqFlower) enabled.push('flower');
-  if (config.seqMeta) enabled.push('meta');
-
-  if (enabled.length === 0) {
+  const seq = sequences.find(s => s.name === config.sequenceName);
+  if (!seq || seq.layouts.length === 0) {
     layouts = [layoutMap.phyllotaxis];
     return;
   }
-
-  if (!config.seqPhyllotaxis || enabled.length === 1) {
-    layouts = enabled.map(n => layoutMap[n]);
-    return;
-  }
-
-  layouts = [];
-  enabled.forEach((name, i) => {
-    layouts.push(layoutMap[name]);
-    if (i < enabled.length - 1) {
-      layouts.push(layoutMap.phyllotaxis);
-    }
-  });
+  layouts = seq.layouts.map(n => nameToLayout[n] || layoutMap.phyllotaxis);
 }
 
 // --- Animation ---

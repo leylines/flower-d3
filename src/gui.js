@@ -1,9 +1,10 @@
 import GUI from 'lil-gui';
+import { sequences } from './sequences';
 
 export function createGUI(config, handlers) {
   const gui = new GUI({ title: 'Controls', width: 280 });
 
-  gui.add(config, 'numPoints', 16000, 512000, 1000)
+  gui.add(config, 'numPoints', 16000, 128000, 1000)
     .name('Points')
     .onChange(handlers.onNumPoints);
 
@@ -15,9 +16,7 @@ export function createGUI(config, handlers) {
     .name('Dark background')
     .onChange(handlers.onBg);
 
-  const seq = gui.addFolder('Sequence');
-  seq.add(config, 'seqTree').name('Tree').onChange(handlers.onSequence);
-  seq.add(config, 'seqFlower').name('Flower').onChange(handlers.onSequence);
-  seq.add(config, 'seqMeta').name('Meta').onChange(handlers.onSequence);
-  seq.add(config, 'seqPhyllotaxis').name('Phyllotaxis transition').onChange(handlers.onSequence);
+  gui.add(config, 'sequenceName', sequences.map(s => s.name))
+    .name('Sequence')
+    .onChange(handlers.onSequence);
 }
